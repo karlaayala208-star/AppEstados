@@ -1,0 +1,1 @@
+AppEstados/estados_mexico[[:space:]]2.geojson filter=lfs diff=lfs merge=lfs -text

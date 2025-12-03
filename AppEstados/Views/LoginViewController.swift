@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import FirebaseAuth
 
 class LoginViewController: UIViewController {
 
@@ -18,11 +19,12 @@ class LoginViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .white
 
-        // Configuración de los campos de texto
-        txtUsuario.placeholder = "Username"
+        txtUsuario.placeholder = "Email"
         txtUsuario.borderStyle = .roundedRect
+        txtUsuario.keyboardType = .emailAddress
+        txtUsuario.autocapitalizationType = .none
         txtUsuario.translatesAutoresizingMaskIntoConstraints = false
-
+        
         txtPasword.placeholder = "Password"
         txtPasword.borderStyle = .roundedRect
         txtPasword.isSecureTextEntry = true
@@ -35,19 +37,33 @@ class LoginViewController: UIViewController {
     }
 
     @objc func loginTapped() {
-        let user = txtUsuario.text ?? ""
-        let pass = txtPasword.text ?? ""
-        if user == "admin" && pass == "1234" {
-            // Navegar al siguiente ViewController
+        guard let email = txtUsuario.text, !email.isEmpty,
+              let password = txtPasword.text, !password.isEmpty else {
+            mostrarAlerta(titulo: "Error", mensaje: "Por favor completa todos los campos")
+            return
+        }
+        
+        // Iniciar sesión con Firebase Authentication
+        Auth.auth().signIn(withEmail: email, password: password) { [weak self] authResult, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                // Error al iniciar sesión
+                self.mostrarAlerta(titulo: "Error de autenticación", mensaje: error.localizedDescription)
+                return
+            }
+            
+            // Login exitoso, navegar al siguiente ViewController
             let storyboard = UIStoryboard(name: "Main", bundle: nil)
             if let mainVC = storyboard.instantiateViewController(withIdentifier: "ViewController") as? ViewController {
-                navigationController?.pushViewController(mainVC, animated: true)
+                self.navigationController?.pushViewController(mainVC, animated: true)
             }
-        } else {
-            //muestra alerta de error, credenciales invalidas
-            let alert = UIAlertController(title: "Error", message: "Credenciales Invalidas", preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
-            present(alert, animated: true)
         }
+    }
+    
+    func mostrarAlerta(titulo: String, mensaje: String) {
+        let alert = UIAlertController(title: titulo, message: mensaje, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
     }
 }

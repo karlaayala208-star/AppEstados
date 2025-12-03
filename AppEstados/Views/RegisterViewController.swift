@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import FirebaseAuth
 
 class RegisterViewController: UIViewController {
     
@@ -93,12 +94,34 @@ class RegisterViewController: UIViewController {
             return
         }
         
-        // Si todo es válido, mostrar mensaje de éxito y regresar al login
-        let alert = UIAlertController(title: "Éxito", message: "Usuario registrado correctamente", preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
-            self?.navigationController?.popViewController(animated: true)
-        })
-        present(alert, animated: true)
+        // Registrar usuario en Firebase Authentication
+        Auth.auth().createUser(withEmail: email, password: password) { [weak self] authResult, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                // Error al registrar
+                self.mostrarAlerta(titulo: "Error de registro", mensaje: error.localizedDescription)
+                return
+            }
+            
+            // Registro exitoso, actualizar el perfil con el nombre
+            if let user = authResult?.user {
+                let changeRequest = user.createProfileChangeRequest()
+                changeRequest.displayName = nombre
+                changeRequest.commitChanges { error in
+                    if let error = error {
+                        print("Error al actualizar perfil: \(error.localizedDescription)")
+                    }
+                }
+            }
+            
+            // Mostrar mensaje de éxito y regresar al login
+            let alert = UIAlertController(title: "¡Éxito!", message: "Usuario registrado correctamente en Firebase", preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+                self.navigationController?.popViewController(animated: true)
+            })
+            self.present(alert, animated: true)
+        }
     }
     
     func isValidEmail(_ email: String) -> Bool {

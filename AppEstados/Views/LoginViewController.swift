@@ -12,11 +12,13 @@ class LoginViewController: UIViewController {
     @IBOutlet weak var txtUsuario: UITextField!
     @IBOutlet weak var txtPasword: UITextField!
     @IBOutlet weak var btnLogin: UIButton!
+    @IBOutlet weak var btnRegistro: UIButton!
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
 
+        // Configuración de los campos de texto
         txtUsuario.placeholder = "Username"
         txtUsuario.borderStyle = .roundedRect
         txtUsuario.translatesAutoresizingMaskIntoConstraints = false
@@ -25,7 +27,8 @@ class LoginViewController: UIViewController {
         txtPasword.borderStyle = .roundedRect
         txtPasword.isSecureTextEntry = true
         txtPasword.translatesAutoresizingMaskIntoConstraints = false
-
+        
+        // Configuración del botón de login
         btnLogin.setTitle("Login", for: .normal)
         btnLogin.addTarget(self, action: #selector(loginTapped), for: .touchUpInside)
         btnLogin.translatesAutoresizingMaskIntoConstraints = false

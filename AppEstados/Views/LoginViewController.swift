@@ -83,6 +83,8 @@ class LoginViewController: UIViewController {
             // Login exitoso, navegar al siguiente ViewController
             let storyboard = UIStoryboard(name: "Main", bundle: nil)
             if let mainVC = storyboard.instantiateViewController(withIdentifier: "ViewController") as? ViewController {
+                // Pasar el nombre del usuario al ViewController
+                mainVC.nombreUsuario = authResult?.user.displayName
                 self.navigationController?.pushViewController(mainVC, animated: true)
             }
         }

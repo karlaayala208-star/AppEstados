@@ -10,6 +10,9 @@ import FirebaseAuth
 
 class LoginViewController: UIViewController {
 
+    @IBOutlet weak var scrollView: UIScrollView!
+    @IBOutlet weak var contentView: UIView!
+    @IBOutlet weak var titleLabel: UILabel!
     @IBOutlet weak var txtUsuario: UITextField!
     @IBOutlet weak var txtPasword: UITextField!
     @IBOutlet weak var btnLogin: UIButton!
@@ -17,23 +20,47 @@ class LoginViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .white
-
-        txtUsuario.placeholder = "Email"
-        txtUsuario.borderStyle = .roundedRect
-        txtUsuario.keyboardType = .emailAddress
-        txtUsuario.autocapitalizationType = .none
-        txtUsuario.translatesAutoresizingMaskIntoConstraints = false
         
-        txtPasword.placeholder = "Password"
-        txtPasword.borderStyle = .roundedRect
-        txtPasword.isSecureTextEntry = true
-        txtPasword.translatesAutoresizingMaskIntoConstraints = false
+        setupKeyboardObservers()
         
-        // Configuración del botón de login
-        btnLogin.setTitle("Login", for: .normal)
-        btnLogin.addTarget(self, action: #selector(loginTapped), for: .touchUpInside)
-        btnLogin.translatesAutoresizingMaskIntoConstraints = false
+        // Agregar tap gesture para cerrar el teclado
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        view.addGestureRecognizer(tapGesture)
+    }
+    
+    func setupKeyboardObservers() {
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow), name: UIResponder.keyboardWillShowNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide), name: UIResponder.keyboardWillHideNotification, object: nil)
+    }
+    
+    @objc func keyboardWillShow(notification: NSNotification) {
+        guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+        
+        let keyboardHeight = keyboardFrame.height
+        let contentInsets = UIEdgeInsets(top: 0, left: 0, bottom: keyboardHeight, right: 0)
+        
+        scrollView.contentInset = contentInsets
+        scrollView.scrollIndicatorInsets = contentInsets
+        
+        // Scroll para mostrar el campo de texto activo
+        if let activeField = findFirstResponder() {
+            let rect = activeField.convert(activeField.bounds, to: scrollView)
+            scrollView.scrollRectToVisible(rect, animated: true)
+        }
+    }
+    
+    @objc func keyboardWillHide(notification: NSNotification) {
+        scrollView.contentInset = .zero
+        scrollView.scrollIndicatorInsets = .zero
+    }
+    
+    func findFirstResponder() -> UIView? {
+        let textFields = [txtUsuario, txtPasword]
+        return textFields.compactMap { $0 }.first { $0.isFirstResponder }
+    }
+    
+    @objc func dismissKeyboard() {
+        view.endEditing(true)
     }
 
     @objc func loginTapped() {
@@ -65,5 +92,9 @@ class LoginViewController: UIViewController {
         let alert = UIAlertController(title: titulo, message: mensaje, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 }

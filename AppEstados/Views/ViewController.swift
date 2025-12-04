@@ -7,6 +7,8 @@
 
 import UIKit
 import FirebaseAuth
+import FirebaseFirestore
+import FirebaseStorage
 
 class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     
@@ -20,7 +22,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     // Vista del banner de perfil
     private let profileBannerView: UIView = {
         let view = UIView()
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.85)
         view.layer.cornerRadius = 12
         view.layer.shadowColor = UIColor.black.cgColor
         view.layer.shadowOpacity = 0.1
@@ -34,7 +36,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
-        imageView.layer.cornerRadius = 40
+        imageView.layer.cornerRadius = 30
         imageView.backgroundColor = .systemGray5
         imageView.image = UIImage(systemName: "person.circle.fill")
         imageView.tintColor = .systemGray3
@@ -48,7 +50,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         button.setImage(UIImage(systemName: "camera.circle.fill"), for: .normal)
         button.tintColor = .systemBlue
         button.backgroundColor = .white
-        button.layer.cornerRadius = 15
+        button.layer.cornerRadius = 12
         button.layer.borderWidth = 2
         button.layer.borderColor = UIColor.systemGray5.cgColor
         button.translatesAutoresizingMaskIntoConstraints = false
@@ -82,6 +84,9 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         
         // Configurar el banner de perfil
         setupProfileBanner()
+        
+        // Cargar imagen de perfil desde Firestore
+        cargarImagenPerfil()
     }
     
     func configurarNavigationBar() {
@@ -113,33 +118,33 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         
         // Configurar las constraints
         NSLayoutConstraint.activate([
-            // Banner view
-            profileBannerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            // Banner view - posicionado más cerca del top con menos altura
+            profileBannerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             profileBannerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             profileBannerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            profileBannerView.heightAnchor.constraint(equalToConstant: 100),
+            profileBannerView.heightAnchor.constraint(equalToConstant: 80),
             
-            // Profile image
+            // Profile image - más pequeña
             profileImageView.centerYAnchor.constraint(equalTo: profileBannerView.centerYAnchor),
-            profileImageView.leadingAnchor.constraint(equalTo: profileBannerView.leadingAnchor, constant: 16),
-            profileImageView.widthAnchor.constraint(equalToConstant: 80),
-            profileImageView.heightAnchor.constraint(equalToConstant: 80),
+            profileImageView.leadingAnchor.constraint(equalTo: profileBannerView.leadingAnchor, constant: 12),
+            profileImageView.widthAnchor.constraint(equalToConstant: 60),
+            profileImageView.heightAnchor.constraint(equalToConstant: 60),
             
-            // Camera button
+            // Camera button - más pequeño
             cameraButton.bottomAnchor.constraint(equalTo: profileImageView.bottomAnchor),
             cameraButton.trailingAnchor.constraint(equalTo: profileImageView.trailingAnchor),
-            cameraButton.widthAnchor.constraint(equalToConstant: 30),
-            cameraButton.heightAnchor.constraint(equalToConstant: 30),
+            cameraButton.widthAnchor.constraint(equalToConstant: 24),
+            cameraButton.heightAnchor.constraint(equalToConstant: 24),
             
             // User name label
-            userNameLabel.topAnchor.constraint(equalTo: profileBannerView.topAnchor, constant: 28),
-            userNameLabel.leadingAnchor.constraint(equalTo: profileImageView.trailingAnchor, constant: 16),
-            userNameLabel.trailingAnchor.constraint(equalTo: profileBannerView.trailingAnchor, constant: -16),
+            userNameLabel.topAnchor.constraint(equalTo: profileBannerView.topAnchor, constant: 20),
+            userNameLabel.leadingAnchor.constraint(equalTo: profileImageView.trailingAnchor, constant: 12),
+            userNameLabel.trailingAnchor.constraint(equalTo: profileBannerView.trailingAnchor, constant: -12),
             
             // Change photo label
-            changePhotoLabel.topAnchor.constraint(equalTo: userNameLabel.bottomAnchor, constant: 4),
-            changePhotoLabel.leadingAnchor.constraint(equalTo: profileImageView.trailingAnchor, constant: 16),
-            changePhotoLabel.trailingAnchor.constraint(equalTo: profileBannerView.trailingAnchor, constant: -16),
+            changePhotoLabel.topAnchor.constraint(equalTo: userNameLabel.bottomAnchor, constant: 2),
+            changePhotoLabel.leadingAnchor.constraint(equalTo: profileImageView.trailingAnchor, constant: 12),
+            changePhotoLabel.trailingAnchor.constraint(equalTo: profileBannerView.trailingAnchor, constant: -12),
         ])
         
         // Agregar tap gesture a la imagen de perfil
@@ -193,14 +198,113 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         if let editedImage = info[.editedImage] as? UIImage {
             profileImageView.image = editedImage
             profileImageView.contentMode = .scaleAspectFill
+            // Subir imagen a Firebase Storage
+            subirImagenPerfil(editedImage)
         } else if let originalImage = info[.originalImage] as? UIImage {
             profileImageView.image = originalImage
             profileImageView.contentMode = .scaleAspectFill
+            // Subir imagen a Firebase Storage
+            subirImagenPerfil(originalImage)
         }
     }
     
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
         picker.dismiss(animated: true)
+    }
+    
+    // MARK: - Firebase Storage & Firestore
+    
+    func cargarImagenPerfil() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        let db = Firestore.firestore()
+        db.collection("usuarios").document(uid).getDocument { [weak self] document, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                print("Error al cargar datos del usuario: \(error.localizedDescription)")
+                return
+            }
+            
+            if let document = document, document.exists,
+               let data = document.data(),
+               let imagenURL = data["imagenProfile"] as? String,
+               !imagenURL.isEmpty,
+               let url = URL(string: imagenURL) {
+                
+                // Descargar imagen desde la URL
+                URLSession.shared.dataTask(with: url) { data, response, error in
+                    if let error = error {
+                        print("Error al descargar imagen: \(error.localizedDescription)")
+                        return
+                    }
+                    
+                    if let data = data, let image = UIImage(data: data) {
+                        DispatchQueue.main.async {
+                            self.profileImageView.image = image
+                            self.profileImageView.contentMode = .scaleAspectFill
+                        }
+                    }
+                }.resume()
+            }
+        }
+    }
+    
+    func subirImagenPerfil(_ image: UIImage) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        guard let imageData = image.jpegData(compressionQuality: 0.5) else { return }
+        
+        let storageRef = Storage.storage().reference()
+        let profileImageRef = storageRef.child("profile_images/\(uid).jpg")
+        
+        // Mostrar indicador de carga (opcional)
+        let activityIndicator = UIActivityIndicatorView(style: .large)
+        activityIndicator.center = view.center
+        activityIndicator.startAnimating()
+        view.addSubview(activityIndicator)
+        
+        // Subir imagen a Firebase Storage
+        profileImageRef.putData(imageData, metadata: nil) { [weak self] metadata, error in
+            guard let self = self else { return }
+            
+            activityIndicator.stopAnimating()
+            activityIndicator.removeFromSuperview()
+            
+            if let error = error {
+                print("Error al subir imagen: \(error.localizedDescription)")
+                self.mostrarAlerta(titulo: "Error", mensaje: "No se pudo subir la imagen de perfil")
+                return
+            }
+            
+            // Obtener URL de descarga
+            profileImageRef.downloadURL { url, error in
+                if let error = error {
+                    print("Error al obtener URL de descarga: \(error.localizedDescription)")
+                    return
+                }
+                
+                guard let downloadURL = url else { return }
+                
+                // Actualizar URL en Firestore
+                self.actualizarImagenEnFirestore(url: downloadURL.absoluteString)
+            }
+        }
+    }
+    
+    func actualizarImagenEnFirestore(url: String) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        let db = Firestore.firestore()
+        db.collection("usuarios").document(uid).updateData([
+            "imagenProfile": url,
+            "fechaActualizacionImagen": FieldValue.serverTimestamp()
+        ]) { error in
+            if let error = error {
+                print("Error al actualizar imagen en Firestore: \(error.localizedDescription)")
+            } else {
+                print("Imagen de perfil actualizada exitosamente en Firestore")
+            }
+        }
     }
     
     @objc func cerrarSesion() {

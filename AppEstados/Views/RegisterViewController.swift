@@ -7,6 +7,8 @@
 
 import UIKit
 import FirebaseAuth
+import FirebaseFirestore
+import FirebaseStorage
 
 class RegisterViewController: UIViewController {
     
@@ -113,14 +115,36 @@ class RegisterViewController: UIViewController {
                         print("Error al actualizar perfil: \(error.localizedDescription)")
                     }
                 }
+                
+                // Guardar datos del usuario en Firestore
+                self.guardarUsuarioEnFirestore(uid: user.uid, nombre: nombre, email: email, usuario: usuario)
             }
+        }
+    }
+    
+    func guardarUsuarioEnFirestore(uid: String, nombre: String, email: String, usuario: String) {
+        let db = Firestore.firestore()
+        
+        let userData: [String: Any] = [
+            "nombre": nombre,
+            "email": email,
+            "usuario": usuario,
+            "imagenProfile": "",
+            "fechaRegistro": FieldValue.serverTimestamp()
+        ]
+        
+        db.collection("usuarios").document(uid).setData(userData) { [weak self] error in
+            guard let self = self else { return }
             
-            // Mostrar mensaje de éxito y regresar al login
-            let alert = UIAlertController(title: "¡Éxito!", message: "Usuario registrado correctamente en Firebase", preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
-                self.navigationController?.popViewController(animated: true)
-            })
-            self.present(alert, animated: true)
+            if let error = error {
+                self.mostrarAlerta(titulo: "Error", mensaje: "No se pudieron guardar los datos: \(error.localizedDescription)")
+            } else {
+                let alert = UIAlertController(title: "¡Éxito!", message: "Usuario registrado correctamente", preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+                    self.navigationController?.popViewController(animated: true)
+                })
+                self.present(alert, animated: true)
+            }
         }
     }
     

@@ -8,7 +8,6 @@
 import UIKit
 import FirebaseAuth
 import FirebaseFirestore
-import FirebaseStorage
 
 class RegisterViewController: UIViewController {
     

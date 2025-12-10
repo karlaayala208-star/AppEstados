@@ -384,8 +384,16 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     @objc func cerrarSesion() {
         do {
             try Auth.auth().signOut()
-            // Volver al LoginViewController
-            self.navigationController?.popToRootViewController(animated: true)
+            
+            // Obtener el storyboard y crear el navigation controller inicial
+            let storyboard = UIStoryboard(name: "Main", bundle: nil)
+            if let initialNavController = storyboard.instantiateInitialViewController() as? UINavigationController {
+                // Reemplazar la ventana completa
+                if let window = view.window {
+                    window.rootViewController = initialNavController
+                    UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: nil)
+                }
+            }
         } catch let error {
             mostrarAlerta(titulo: "Error", mensaje: "No se pudo cerrar sesión: \(error.localizedDescription)")
         }

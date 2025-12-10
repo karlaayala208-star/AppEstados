@@ -23,6 +23,10 @@ class LoginViewController: UIViewController {
         
         setupKeyboardObservers()
         
+        // Conectar acciones de los botones
+        btnLogin.addTarget(self, action: #selector(loginTapped), for: .touchUpInside)
+        btnRegistro.addTarget(self, action: #selector(registroTapped), for: .touchUpInside)
+        
         // Agregar tap gesture para cerrar el teclado
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
         view.addGestureRecognizer(tapGesture)
@@ -88,13 +92,31 @@ class LoginViewController: UIViewController {
                 return
             }
             
-            // Login exitoso, navegar al siguiente ViewController
-            let storyboard = UIStoryboard(name: "Main", bundle: nil)
-            if let mainVC = storyboard.instantiateViewController(withIdentifier: "ViewController") as? ViewController {
-                // Pasar el nombre del usuario al ViewController
-                mainVC.nombreUsuario = authResult?.user.displayName
-                self.navigationController?.pushViewController(mainVC, animated: true)
+            // Login exitoso, verificar si es la primera vez que este usuario hace login
+            if let uid = authResult?.user.uid {
+                let hasSeenTutorialKey = "hasSeenTutorial_\(uid)"
+                let hasSeenTutorial = UserDefaults.standard.bool(forKey: hasSeenTutorialKey)
+                
+                if !hasSeenTutorial {
+                    // Mostrar tutorial por primera vez para este usuario
+                    let tutorialVC = TutorialViewController()
+                    self.navigationController?.setViewControllers([tutorialVC], animated: true)
+                } else {
+                    // Navegar directamente al ViewController principal
+                    let storyboard = UIStoryboard(name: "Main", bundle: nil)
+                    if let mainVC = storyboard.instantiateViewController(withIdentifier: "ViewController") as? ViewController {
+                        mainVC.nombreUsuario = authResult?.user.displayName
+                        self.navigationController?.setViewControllers([mainVC], animated: true)
+                    }
+                }
             }
+        }
+    }
+    
+    @objc func registroTapped() {
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+        if let registerVC = storyboard.instantiateViewController(withIdentifier: "RegisterViewController") as? RegisterViewController {
+            navigationController?.pushViewController(registerVC, animated: true)
         }
     }
     

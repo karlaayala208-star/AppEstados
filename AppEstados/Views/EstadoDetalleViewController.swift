@@ -6,7 +6,7 @@
 //
 
 import UIKit
-import MediaPlayer
+import AVFoundation
 
 class EstadoDetalleViewController: UIViewController {
 
@@ -92,8 +92,6 @@ class EstadoDetalleViewController: UIViewController {
         "Baja California Sur": "Ceviche de camarón"
     ]
 
-
-
     override func viewDidLoad() {
             super.viewDidLoad()
             mostrarNombreYComida()
@@ -176,9 +174,50 @@ class EstadoDetalleViewController: UIViewController {
     @IBAction func escuchar(_ sender: UIButton) {
         reproducirAudio()
     }
+    
+    // Método para obtener el nombre correcto del archivo de audio
+    func nombreAudioParaEstado(_ estado: String) -> String {
+        // Mapeo especial para casos que no siguen el patrón estándar
+        let mapaEspecial: [String: String] = [
+            "Baja California": "AudioBajaCalifornia",
+            "Baja California Sur": "AudioBajaCaliforniaSur",
+            "Ciudad de México": "AudioCiudad de México",
+            "Nuevo León": "AudioNuevo León",
+            "Quintana Roo": "AudioQuintana Roo",
+            "San Luis Potosí": "AudioSan Luis Potosí",
+            "Michoacán": "AudioMichoacan",
+            "Querétaro": "AudioQueretaro",
+            "Yucatán": "AudioYucatan"
+        ]
+        
+        if let nombreEspecial = mapaEspecial[estado] {
+            return nombreEspecial
+        }
+        
+        // Para los demás estados, simplemente concatenar "Audio" + nombre
+        return "Audio" + estado
+    }
+    
     func reproducirAudio() {
-        guard let path = Bundle.main.path(forResource: "Audio" + (estadoNombre ?? ""), ofType: "mp3") else {
-            print("Audio no encontrado")
+        guard let nombre = estadoNombre else {
+            print("No hay estado seleccionado")
+            return
+        }
+        
+        let nombreArchivo = nombreAudioParaEstado(nombre)
+        
+        guard let path = Bundle.main.path(forResource: nombreArchivo, ofType: "mp3") else {
+            print("Audio no encontrado para: \(nombre)")
+            print("Buscando archivo: \(nombreArchivo).mp3")
+            
+            // Mostrar alerta al usuario
+            let alerta = UIAlertController(
+                title: "Audio no disponible",
+                message: "Lo sentimos, el audio para \(nombre) no está disponible en este momento.",
+                preferredStyle: .alert
+            )
+            alerta.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alerta, animated: true)
             return
         }
 
@@ -188,8 +227,18 @@ class EstadoDetalleViewController: UIViewController {
             reproductor = try AVAudioPlayer(contentsOf: url)
             reproductor?.prepareToPlay()
             reproductor?.play()
+            print("Reproduciendo audio: \(nombreArchivo).mp3")
         } catch {
             print("Error al reproducir el audio: \(error.localizedDescription)")
+            
+            // Mostrar alerta al usuario
+            let alerta = UIAlertController(
+                title: "Error",
+                message: "No se pudo reproducir el audio. Por favor, intenta de nuevo.",
+                preferredStyle: .alert
+            )
+            alerta.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alerta, animated: true)
         }
     }
 

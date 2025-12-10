@@ -199,11 +199,15 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             profileImageView.contentMode = .scaleAspectFill
             // Subir imagen a Firebase Storage
             subirImagenPerfil(editedImage)
+            // Actualizar el texto debajo del perfil
+            actualizarTextoDebajoPerfil(tieneImagen: true)
         } else if let originalImage = info[.originalImage] as? UIImage {
             profileImageView.image = originalImage
             profileImageView.contentMode = .scaleAspectFill
             // Subir imagen a Firebase Storage
             subirImagenPerfil(originalImage)
+            // Actualizar el texto debajo del perfil
+            actualizarTextoDebajoPerfil(tieneImagen: true)
         }
     }
     
@@ -212,6 +216,18 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     }
     
     // MARK: - Firebase Storage & Firestore
+    
+    func actualizarTextoDebajoPerfil(tieneImagen: Bool) {
+        if tieneImagen {
+            // Si tiene imagen, mostrar el email
+            if let email = Auth.auth().currentUser?.email {
+                changePhotoLabel.text = email
+            }
+        } else {
+            // Si no tiene imagen, mostrar el texto por defecto
+            changePhotoLabel.text = "Toca para cambiar foto"
+        }
+    }
     
     func cargarImagenPerfil() {
         guard let uid = Auth.auth().currentUser?.uid else { return }
@@ -222,6 +238,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             
             if let error = error {
                 print("Error al cargar datos del usuario: \(error.localizedDescription)")
+                self.actualizarTextoDebajoPerfil(tieneImagen: false)
                 return
             }
             
@@ -236,7 +253,16 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
                     DispatchQueue.main.async {
                         self.profileImageView.image = image
                         self.profileImageView.contentMode = .scaleAspectFill
+                        self.actualizarTextoDebajoPerfil(tieneImagen: true)
                     }
+                } else {
+                    DispatchQueue.main.async {
+                        self.actualizarTextoDebajoPerfil(tieneImagen: false)
+                    }
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self.actualizarTextoDebajoPerfil(tieneImagen: false)
                 }
             }
         }

@@ -115,6 +115,13 @@ class RegisterViewController: UIViewController {
                     }
                 }
                 
+                // Enviar correo de verificación
+                user.sendEmailVerification { error in
+                    if let error = error {
+                        print("Error al enviar correo de verificación: \(error.localizedDescription)")
+                    }
+                }
+                
                 // Guardar datos del usuario en Firestore
                 self.guardarUsuarioEnFirestore(uid: user.uid, nombre: nombre, email: email, usuario: usuario)
             }
@@ -138,8 +145,10 @@ class RegisterViewController: UIViewController {
             if let error = error {
                 self.mostrarAlerta(titulo: "Error", mensaje: "No se pudieron guardar los datos: \(error.localizedDescription)")
             } else {
-                let alert = UIAlertController(title: "¡Éxito!", message: "Usuario registrado correctamente", preferredStyle: .alert)
+                let alert = UIAlertController(title: "¡Éxito!", message: "Usuario registrado correctamente. Se ha enviado un correo de verificación a tu email. Por favor verifica tu correo antes de iniciar sesión.", preferredStyle: .alert)
                 alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+                    // Cerrar sesión automáticamente después del registro
+                    try? Auth.auth().signOut()
                     self.navigationController?.popViewController(animated: true)
                 })
                 self.present(alert, animated: true)

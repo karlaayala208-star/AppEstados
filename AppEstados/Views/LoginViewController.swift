@@ -80,6 +80,14 @@ class LoginViewController: UIViewController {
                 return
             }
             
+            // Verificar si el correo electrónico está verificado
+            guard let user = authResult?.user, user.isEmailVerified else {
+                // Cerrar sesión si el correo no está verificado
+                try? Auth.auth().signOut()
+                self.mostrarAlerta(titulo: "Correo no verificado", mensaje: "Por favor verifica tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada y la carpeta de spam.")
+                return
+            }
+            
             // Login exitoso, navegar al siguiente ViewController
             let storyboard = UIStoryboard(name: "Main", bundle: nil)
             if let mainVC = storyboard.instantiateViewController(withIdentifier: "ViewController") as? ViewController {

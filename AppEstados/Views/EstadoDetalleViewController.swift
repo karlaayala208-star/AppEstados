@@ -87,9 +87,9 @@ class EstadoDetalleViewController: UIViewController {
         "Tamaulipas": "Jaibas rellenas",
         "Tlaxcala": "Tacos de canasta",
         "Zacatecas": "Birria de chivo",
-        "Tabasco": "Puchero Tabasqueño"
-        
-        
+        "Tabasco": "Puchero Tabasqueño",
+        "Baja California": "Pescado zarandeado",
+        "Baja California Sur": "Ceviche de camarón"
     ]
 
 

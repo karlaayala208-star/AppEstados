@@ -34,16 +34,23 @@ class MapaViewController: UIViewController, MKMapViewDelegate {
         }
 
         for feature in features {
+            // Extraer el nombre del estado
+            let estadoNombre = feature.properties.flatMap {
+                (try? JSONSerialization.jsonObject(with: $0)) as? [String: Any]
+            }.flatMap {
+                $0["name"] as? String
+            }
+            
             for geo in feature.geometry {
+                // Manejar Polygon simple
                 if let poly = geo as? MKPolygon {
-                    poly.title = feature.properties.flatMap {
-                        (try? JSONSerialization.jsonObject(with: $0)) as? [String: Any]
-                    }.flatMap {
-                        $0["name"] as? String
-
-                    }
-
+                    poly.title = estadoNombre
                     mapView.addOverlay(poly)
+                }
+                // Manejar MultiPolygon (estados con islas como Baja California)
+                else if let multiPoly = geo as? MKMultiPolygon {
+                    multiPoly.title = estadoNombre
+                    mapView.addOverlay(multiPoly)
                 }
             }
         }
@@ -91,14 +98,24 @@ class MapaViewController: UIViewController, MKMapViewDelegate {
 
     // 🎨 Renderiza los polígonos
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
-        guard let polygon = overlay as? MKPolygon else {
-            return MKOverlayRenderer()
+        // Manejar Polygon simple
+        if let polygon = overlay as? MKPolygon {
+            let renderer = MKPolygonRenderer(polygon: polygon)
+            renderer.fillColor = UIColor.systemBlue.withAlphaComponent(0.3)
+            renderer.strokeColor = UIColor.blue
+            renderer.lineWidth = 2
+            return renderer
         }
-        let renderer = MKPolygonRenderer(polygon: polygon)
-        renderer.fillColor = UIColor.systemBlue.withAlphaComponent(0.3)
-        renderer.strokeColor = UIColor.blue
-        renderer.lineWidth = 2
-        return renderer
+        // Manejar MultiPolygon (estados con islas)
+        else if let multiPolygon = overlay as? MKMultiPolygon {
+            let renderer = MKMultiPolygonRenderer(multiPolygon: multiPolygon)
+            renderer.fillColor = UIColor.systemBlue.withAlphaComponent(0.3)
+            renderer.strokeColor = UIColor.blue
+            renderer.lineWidth = 2
+            return renderer
+        }
+        
+        return MKOverlayRenderer()
     }
 
 
@@ -107,18 +124,36 @@ class MapaViewController: UIViewController, MKMapViewDelegate {
     @objc func handleMapTap(_ sender: UITapGestureRecognizer) {
         let tapPoint = sender.location(in: mapView)
         let tapCoordinate = mapView.convert(tapPoint, toCoordinateFrom: mapView)
+        let mapPoint = MKMapPoint(tapCoordinate)
 
         for overlay in mapView.overlays {
-            guard let polygon = overlay as? MKPolygon else { continue }
-            let renderer = MKPolygonRenderer(polygon: polygon)
-            let mapPoint = MKMapPoint(tapCoordinate)
-            let point = renderer.point(for: mapPoint)
-
-            if renderer.path.contains(point) {
-                print("Tocaste el estado: \(polygon.title ?? "Desconocido")")
+            var estadoNombre: String?
+            var contains = false
+            
+            // Manejar Polygon simple
+            if let polygon = overlay as? MKPolygon {
+                let renderer = MKPolygonRenderer(polygon: polygon)
+                let point = renderer.point(for: mapPoint)
+                if renderer.path.contains(point) {
+                    estadoNombre = polygon.title
+                    contains = true
+                }
+            }
+            // Manejar MultiPolygon (estados con islas como Baja California)
+            else if let multiPolygon = overlay as? MKMultiPolygon {
+                let renderer = MKMultiPolygonRenderer(multiPolygon: multiPolygon)
+                let point = renderer.point(for: mapPoint)
+                if renderer.path.contains(point) {
+                    estadoNombre = multiPolygon.title
+                    contains = true
+                }
+            }
+            
+            if contains, let nombre = estadoNombre {
+                print("Tocaste el estado: \(nombre)")
                 // Crear y presentar la vista de detalle
                 /*  let detalleVC = EstadoDetalleViewController()
-                 detalleVC.estadoNombre = polygon.title ?? "Desconocido"
+                 detalleVC.estadoNombre = nombre
 
                  // Puedes usar push o modal, según tu estructura
                  if let nav = navigationController {
@@ -130,9 +165,10 @@ class MapaViewController: UIViewController, MKMapViewDelegate {
                 let storyboard = UIStoryboard(name: "Main", bundle: nil)
                 let detalleVC = storyboard.instantiateViewController(withIdentifier: "EstadoDetalleViewController") as?
                 EstadoDetalleViewController
-                detalleVC?.estadoNombre = polygon.title ?? "Desconocido"
+                detalleVC?.estadoNombre = nombre
                 present(detalleVC ?? UIViewController(), animated: true)
-
+                
+                return // Salir después de encontrar el estado
             }
         }
     }

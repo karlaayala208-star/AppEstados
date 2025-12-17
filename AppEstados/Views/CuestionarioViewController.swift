@@ -32,7 +32,7 @@ class CuestionarioViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .white
+        view.backgroundColor = .systemBackground
         self.navigationItem.hidesBackButton = true
         configurarVista()
         mostrarPregunta()
@@ -42,6 +42,7 @@ class CuestionarioViewController: UIViewController {
         preguntaLabel.font = UIFont.systemFont(ofSize: 20, weight: .semibold)
         preguntaLabel.numberOfLines = 0
         preguntaLabel.textAlignment = .center
+        preguntaLabel.textColor = .label
         preguntaLabel.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(preguntaLabel)
 

@@ -8,6 +8,7 @@
 import UIKit
 import FirebaseAuth
 import FirebaseFirestore
+import FirebaseStorage
 
 class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     
@@ -199,11 +200,15 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             profileImageView.contentMode = .scaleAspectFill
             // Subir imagen a Firebase Storage
             subirImagenPerfil(editedImage)
+            // Actualizar el texto debajo del perfil
+            actualizarTextoDebajoPerfil(tieneImagen: true)
         } else if let originalImage = info[.originalImage] as? UIImage {
             profileImageView.image = originalImage
             profileImageView.contentMode = .scaleAspectFill
             // Subir imagen a Firebase Storage
             subirImagenPerfil(originalImage)
+            // Actualizar el texto debajo del perfil
+            actualizarTextoDebajoPerfil(tieneImagen: true)
         }
     }
     
@@ -212,6 +217,18 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     }
     
     // MARK: - Firebase Storage & Firestore
+    
+    func actualizarTextoDebajoPerfil(tieneImagen: Bool) {
+        if tieneImagen {
+            // Si tiene imagen, mostrar el email
+            if let email = Auth.auth().currentUser?.email {
+                changePhotoLabel.text = email
+            }
+        } else {
+            // Si no tiene imagen, mostrar el texto por defecto
+            changePhotoLabel.text = "Toca para cambiar foto"
+        }
+    }
     
     func cargarImagenPerfil() {
         guard let uid = Auth.auth().currentUser?.uid else { return }
@@ -222,21 +239,41 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             
             if let error = error {
                 print("Error al cargar datos del usuario: \(error.localizedDescription)")
+                self.actualizarTextoDebajoPerfil(tieneImagen: false)
                 return
             }
             
             if let document = document, document.exists,
                let data = document.data(),
-               let imagenBase64 = data["imagenProfile"] as? String,
-               !imagenBase64.isEmpty {
+               let imagenURL = data["imagenProfile"] as? String,
+               !imagenURL.isEmpty,
+               let url = URL(string: imagenURL) {
                 
-                // Convertir Base64 a imagen
-                if let imageData = Data(base64Encoded: imagenBase64),
-                   let image = UIImage(data: imageData) {
-                    DispatchQueue.main.async {
-                        self.profileImageView.image = image
-                        self.profileImageView.contentMode = .scaleAspectFill
+                // Descargar imagen desde URL
+                URLSession.shared.dataTask(with: url) { data, response, error in
+                    if let error = error {
+                        print("Error al descargar imagen: \(error.localizedDescription)")
+                        DispatchQueue.main.async {
+                            self.actualizarTextoDebajoPerfil(tieneImagen: false)
+                        }
+                        return
                     }
+                    
+                    if let data = data, let image = UIImage(data: data) {
+                        DispatchQueue.main.async {
+                            self.profileImageView.image = image
+                            self.profileImageView.contentMode = .scaleAspectFill
+                            self.actualizarTextoDebajoPerfil(tieneImagen: true)
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            self.actualizarTextoDebajoPerfil(tieneImagen: false)
+                        }
+                    }
+                }.resume()
+            } else {
+                DispatchQueue.main.async {
+                    self.actualizarTextoDebajoPerfil(tieneImagen: false)
                 }
             }
         }
@@ -249,22 +286,12 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         }
         
         // Redimensionar la imagen para que sea más pequeña
-        let resizedImage = resizeImage(image: image, targetSize: CGSize(width: 400, height: 400))
+        let resizedImage = resizeImage(image: image, targetSize: CGSize(width: 800, height: 800))
         
-        guard let imageData = resizedImage.jpegData(compressionQuality: 0.5) else {
+        guard let imageData = resizedImage.jpegData(compressionQuality: 0.7) else {
             mostrarAlerta(titulo: "Error", mensaje: "No se pudo procesar la imagen")
             return
         }
-        
-        // Verificar tamaño de la imagen (Firestore tiene límite de 1MB por documento)
-        let imageSizeMB = Double(imageData.count) / 1024.0 / 1024.0
-        if imageSizeMB > 0.8 {
-            mostrarAlerta(titulo: "Error", mensaje: "La imagen es muy grande. Por favor selecciona una imagen más pequeña.")
-            return
-        }
-        
-        // Convertir a Base64
-        let base64String = imageData.base64EncodedString()
         
         // Mostrar indicador de carga
         let activityIndicator = UIActivityIndicatorView(style: .large)
@@ -272,24 +299,44 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         activityIndicator.startAnimating()
         view.addSubview(activityIndicator)
         
-        // Guardar directamente en Firestore
-        let db = Firestore.firestore()
-        db.collection("usuarios").document(uid).updateData([
-            "imagenProfile": base64String,
-            "fechaActualizacionImagen": FieldValue.serverTimestamp()
-        ]) { [weak self] error in
+        // Crear referencia en Firebase Storage
+        let storageRef = Storage.storage().reference()
+        let profileImageRef = storageRef.child("profile_images/\(uid).jpg")
+        
+        // Metadatos de la imagen
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/jpeg"
+        
+        // Subir imagen a Firebase Storage
+        profileImageRef.putData(imageData, metadata: metadata) { [weak self] metadata, error in
             guard let self = self else { return }
             
-            DispatchQueue.main.async {
-                activityIndicator.stopAnimating()
-                activityIndicator.removeFromSuperview()
+            if let error = error {
+                DispatchQueue.main.async {
+                    activityIndicator.stopAnimating()
+                    activityIndicator.removeFromSuperview()
+                    self.mostrarAlerta(titulo: "Error", mensaje: "No se pudo subir la imagen: \(error.localizedDescription)")
+                }
+                return
+            }
+            
+            // Obtener URL de descarga
+            profileImageRef.downloadURL { url, error in
+                DispatchQueue.main.async {
+                    activityIndicator.stopAnimating()
+                    activityIndicator.removeFromSuperview()
+                }
                 
                 if let error = error {
-                    self.mostrarAlerta(titulo: "Error", mensaje: "No se pudo actualizar la imagen: \(error.localizedDescription)")
-                } else {
-                    let alert = UIAlertController(title: "¡Éxito!", message: "Imagen de perfil actualizada correctamente", preferredStyle: .alert)
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
-                    self.present(alert, animated: true)
+                    DispatchQueue.main.async {
+                        self.mostrarAlerta(titulo: "Error", mensaje: "No se pudo obtener la URL de la imagen: \(error.localizedDescription)")
+                    }
+                    return
+                }
+                
+                if let downloadURL = url {
+                    // Guardar URL en Firestore
+                    self.actualizarImagenEnFirestore(url: downloadURL.absoluteString)
                 }
             }
         }
@@ -337,8 +384,16 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     @objc func cerrarSesion() {
         do {
             try Auth.auth().signOut()
-            // Volver al LoginViewController
-            self.navigationController?.popToRootViewController(animated: true)
+            
+            // Obtener el storyboard y crear el navigation controller inicial
+            let storyboard = UIStoryboard(name: "Main", bundle: nil)
+            if let initialNavController = storyboard.instantiateInitialViewController() as? UINavigationController {
+                // Reemplazar la ventana completa
+                if let window = view.window {
+                    window.rootViewController = initialNavController
+                    UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: nil)
+                }
+            }
         } catch let error {
             mostrarAlerta(titulo: "Error", mensaje: "No se pudo cerrar sesión: \(error.localizedDescription)")
         }

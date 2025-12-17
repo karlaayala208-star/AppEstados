@@ -2,7 +2,7 @@
 //  TutorialViewController.swift
 //  AppEstados
 //
-//  Created by Jose David on 09/12/25.
+//  Created by Karla Ayala
 //
 
 import UIKit

@@ -86,9 +86,6 @@
                                                 <rect key="frame" x="66.666666666666686" y="332" width="260" height="30"/>
                                                 <fontDescription key="fontDescription" type="system" pointSize="14"/>
                                                 <state key="normal" title="¿No tienes cuenta? Regístrate aquí"/>
-                                                <connections>
-                                                    <segue destination="rTH-9d-kLp" kind="show" id="d7K-Tz-fhG"/>
-                                                </connections>
                                             </button>
                                         </subviews>
                                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>

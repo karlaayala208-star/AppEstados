@@ -2,7 +2,7 @@
 //  RegisterViewController.swift
 //  AppEstados
 //
-//  Created by Jose David on 02/12/25.
+//  Created by Karla Ayala
 //
 
 import UIKit
@@ -25,6 +25,9 @@ class RegisterViewController: UIViewController {
         super.viewDidLoad()
         
         setupKeyboardObservers()
+        
+        // Conectar acción del botón registrar
+        btnRegistrar.addTarget(self, action: #selector(registrarTapped), for: .touchUpInside)
         
         // Agregar tap gesture para cerrar el teclado
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))

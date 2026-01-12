@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import FirebaseAuth
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
@@ -16,7 +17,41 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Use this method to optionally configure and attach the UIWindow `window` to the provided UIWindowScene `scene`.
         // If using a storyboard, the `window` property will automatically be initialized and attached to the scene.
         // This delegate does not imply the connecting scene or session are new (see `application:configurationForConnectingSceneSession` instead).
-        guard let _ = (scene as? UIWindowScene) else { return }
+        guard let windowScene = (scene as? UIWindowScene) else { return }
+        
+        // Configurar la ventana
+        window = UIWindow(windowScene: windowScene)
+        
+        // Obtener el storyboard
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+        
+        // Verificar si hay un usuario autenticado
+        if let user = Auth.auth().currentUser {
+            // Hay usuario autenticado
+            let hasSeenTutorialKey = "hasSeenTutorial_\(user.uid)"
+            let hasSeenTutorial = UserDefaults.standard.bool(forKey: hasSeenTutorialKey)
+            
+            if hasSeenTutorial {
+                // Ya vio el tutorial, ir al ViewController principal
+                if let mainVC = storyboard.instantiateViewController(withIdentifier: "ViewController") as? ViewController {
+                    mainVC.nombreUsuario = user.displayName
+                    let navigationController = UINavigationController(rootViewController: mainVC)
+                    window?.rootViewController = navigationController
+                }
+            } else {
+                // Mostrar tutorial
+                let tutorialVC = TutorialViewController()
+                let navigationController = UINavigationController(rootViewController: tutorialVC)
+                window?.rootViewController = navigationController
+            }
+        } else {
+            // No hay usuario autenticado, mostrar login
+            if let initialNavController = storyboard.instantiateInitialViewController() {
+                window?.rootViewController = initialNavController
+            }
+        }
+        
+        window?.makeKeyAndVisible()
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {

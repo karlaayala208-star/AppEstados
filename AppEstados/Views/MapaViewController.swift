@@ -245,7 +245,13 @@ class MapaViewController: UIViewController, MKMapViewDelegate {
                 let detalleVC = storyboard.instantiateViewController(withIdentifier: "EstadoDetalleViewController") as?
                 EstadoDetalleViewController
                 detalleVC?.estadoNombre = nombre
-                present(detalleVC ?? UIViewController(), animated: true)
+                
+                // Usar push en lugar de present para mostrar el botón de regreso
+                if let nav = navigationController {
+                    nav.pushViewController(detalleVC ?? UIViewController(), animated: true)
+                } else {
+                    present(detalleVC ?? UIViewController(), animated: true)
+                }
                 
                 return // Salir después de encontrar el estado
             }

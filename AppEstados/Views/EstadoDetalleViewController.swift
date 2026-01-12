@@ -10,12 +10,80 @@ import AVFoundation
 
 class EstadoDetalleViewController: UIViewController {
 
-    
     @IBOutlet weak var vervideo: UIButton!
     @IBOutlet weak var escuchar: UIButton!
     @IBOutlet weak var verimagen: UIImageView!
     @IBOutlet weak var nombreComidaLabel: UILabel!
+    
+    // Label del storyboard que vamos a ocultar
+    private var labelComidaTipicaStoryboard: UILabel?
 
+    // Container para la comida típica
+    private let comidaContainerView: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.systemBackground
+        view.layer.cornerRadius = 16
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOpacity = 0.1
+        view.layer.shadowOffset = CGSize(width: 0, height: 2)
+        view.layer.shadowRadius = 6
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
+    private let comidaTitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "🍽️ La comida típica es:"
+        label.font = .systemFont(ofSize: 22, weight: .bold)
+        label.textColor = .systemOrange
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    // ScrollView para mejor organización
+    private let scrollView: UIScrollView = {
+        let scroll = UIScrollView()
+        scroll.translatesAutoresizingMaskIntoConstraints = false
+        scroll.showsVerticalScrollIndicator = true
+        return scroll
+    }()
+    
+    private let contentView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
+    // Labels para lugares turísticos
+    private let lugarTuristicoContainerView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .white
+        view.layer.cornerRadius = 16
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOpacity = 0.1
+        view.layer.shadowOffset = CGSize(width: 0, height: 2)
+        view.layer.shadowRadius = 6
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
+    private let lugarTuristicoTitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "📍 Lugar turístico"
+        label.font = .systemFont(ofSize: 20, weight: .bold)
+        label.textColor = .systemBlue
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private let lugarTuristicoLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 16, weight: .regular)
+        label.textColor = .darkGray
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
     
     var reproductor: AVAudioPlayer?
     var estadoNombre: String?
@@ -91,18 +159,243 @@ class EstadoDetalleViewController: UIViewController {
         "Baja California": "Pescado zarandeado",
         "Baja California Sur": "Ceviche de camarón"
     ]
+    
+    let lugarTuristicoPorEstado: [String: String] = [
+        "Aguascalientes": "Feria Nacional de San Marcos - La feria más importante de México",
+        "Baja California": "La Bufadora - Géiser marino natural y playas de Ensenada",
+        "Baja California Sur": "El Arco de Cabo San Lucas - Formación rocosa icónica",
+        "Campeche": "Ciudad amurallada de Campeche - Patrimonio de la Humanidad",
+        "Chiapas": "Cañón del Sumidero - Impresionante formación natural",
+        "Chihuahua": "Barrancas del Cobre - Sistema de cañones más grande que el Gran Cañón",
+        "Ciudad de México": "Centro Histórico - Zócalo, Catedral Metropolitana y Templo Mayor",
+        "Coahuila": "Cuatro Ciénegas - Reserva de la biosfera única",
+        "Colima": "Volcán de Colima - Uno de los volcanes más activos de México",
+        "Durango": "Zona del Silencio - Área con fenómenos magnéticos únicos",
+        "Guanajuato": "Callejón del Beso - Leyenda romántica y arquitectura colonial",
+        "Guerrero": "Acapulco - Playas y los famosos clavadistas de La Quebrada",
+        "Hidalgo": "Prismas Basálticos - Formaciones de columnas de basalto",
+        "Jalisco": "Tequila - Pueblo Mágico y paisaje agavero, Patrimonio de la Humanidad",
+        "México": "Teotihuacán - Zona arqueológica con las pirámides del Sol y la Luna",
+        "Michoacán": "Santuario de la Mariposa Monarca - Reserva de la Biosfera",
+        "Morelos": "Tepoztlán - Pueblo Mágico y zona arqueológica",
+        "Nayarit": "Islas Marietas - Reserva natural con la Playa del Amor",
+        "Nuevo León": "Grutas de García - Sistema de cuevas impresionantes",
+        "Oaxaca": "Monte Albán - Zona arqueológica zapoteca, Patrimonio de la Humanidad",
+        "Puebla": "Puebla Capital - Centro histórico y la Capilla del Rosario",
+        "Querétaro": "Peña de Bernal - Tercer monolito más grande del mundo",
+        "Quintana Roo": "Chichén Itzá - Una de las nuevas siete maravillas del mundo",
+        "San Luis Potosí": "Sótano de las Golondrinas - Abismo natural impresionante",
+        "Sinaloa": "Mazatlán - Malecón y playas del Pacífico",
+        "Sonora": "San Carlos - Playas y deportes acuáticos",
+        "Tabasco": "Parque Museo La Venta - Sitio arqueológico olmeca",
+        "Tamaulipas": "Tampico - Playas y laguna del Chairel",
+        "Tlaxcala": "Cacaxtla - Zona arqueológica con murales prehispánicos",
+        "Veracruz": "Tajín - Zona arqueológica con la Pirámide de los Nichos",
+        "Yucatán": "Chichén Itzá y Uxmal - Ciudades mayas antiguas",
+        "Zacatecas": "Cerro de la Bufa - Mirador y teleférico"
+    ]
 
     override func viewDidLoad() {
             super.viewDidLoad()
-            mostrarNombreYComida()
+            
+            // Configurar navegación
+            title = estadoNombre ?? "Detalle del Estado"
+            navigationItem.largeTitleDisplayMode = .never
+            
+            // Asegurar que el navigation bar sea visible
+            navigationController?.setNavigationBarHidden(false, animated: false)
+            
+            // Configurar el fondo
+            view.backgroundColor = .systemGroupedBackground
+            
+            setupScrollView()
+            setupComidaContainer()
+            configurarEstiloVistas()  // Mover ANTES de setupLugarTuristicoViews
+            setupLugarTuristicoViews()  // Ahora los botones ya están en contentView
             
             // Cargar imagen según el estado
             if let nombre = estadoNombre {
                 let nombreImagen = nombreImagenParaEstado(nombre)
-                verimagen.image = UIImage(named: nombreImagen) ?? UIImage(named: "comidadesconocida") // Imagen por defecto si no encuentra
+                verimagen.image = UIImage(named: nombreImagen) ?? UIImage(named: "comidadesconocida")
             } else {
                 verimagen.image = UIImage(named: "comidadesconocida")
             }
+            
+            mostrarNombreYComida()
+            mostrarLugarTuristico()
+        }
+        
+        override func viewDidLayoutSubviews() {
+            super.viewDidLayoutSubviews()
+            
+            // Actualizar el contentSize del scroll después de que el layout se haya calculado
+            DispatchQueue.main.async {
+                print("📐 ContentView height: \(self.contentView.frame.height)")
+                print("📐 ScrollView contentSize: \(self.scrollView.contentSize)")
+                print("📐 Lugar Turístico Container frame: \(self.lugarTuristicoContainerView.frame)")
+            }
+        }
+        
+        func setupComidaContainer() {
+            // Ocultar el label "La comida tipica es:" del storyboard
+            if let labelStoryboard = view.subviews.first(where: { ($0 as? UILabel)?.text == "La comida tipica es:" }) as? UILabel {
+                labelStoryboard.isHidden = true
+            }
+            
+            // Agregar el container de comida al contentView
+            contentView.addSubview(comidaContainerView)
+            comidaContainerView.addSubview(comidaTitleLabel)
+            
+            // Mover el label de nombre de comida al container
+            nombreComidaLabel.removeFromSuperview()
+            comidaContainerView.addSubview(nombreComidaLabel)
+            
+            // Actualizar el estilo del label de nombre de comida
+            nombreComidaLabel.font = .systemFont(ofSize: 18, weight: .semibold)
+            nombreComidaLabel.textColor = .label
+            nombreComidaLabel.numberOfLines = 0
+            nombreComidaLabel.translatesAutoresizingMaskIntoConstraints = false
+            
+            // Mover la imagen después del container
+            verimagen.removeFromSuperview()
+            contentView.addSubview(verimagen)
+            verimagen.translatesAutoresizingMaskIntoConstraints = false
+            
+            NSLayoutConstraint.activate([
+                // Container de comida - PRIMERO
+                comidaContainerView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
+                comidaContainerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+                comidaContainerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+                
+                // Título de comida
+                comidaTitleLabel.topAnchor.constraint(equalTo: comidaContainerView.topAnchor, constant: 16),
+                comidaTitleLabel.leadingAnchor.constraint(equalTo: comidaContainerView.leadingAnchor, constant: 16),
+                comidaTitleLabel.trailingAnchor.constraint(equalTo: comidaContainerView.trailingAnchor, constant: -16),
+                
+                // Nombre de la comida
+                nombreComidaLabel.topAnchor.constraint(equalTo: comidaTitleLabel.bottomAnchor, constant: 8),
+                nombreComidaLabel.leadingAnchor.constraint(equalTo: comidaContainerView.leadingAnchor, constant: 16),
+                nombreComidaLabel.trailingAnchor.constraint(equalTo: comidaContainerView.trailingAnchor, constant: -16),
+                nombreComidaLabel.bottomAnchor.constraint(equalTo: comidaContainerView.bottomAnchor, constant: -16),
+                
+                // Imagen - SEGUNDO, debajo del container de comida
+                verimagen.topAnchor.constraint(equalTo: comidaContainerView.bottomAnchor, constant: 20),
+                verimagen.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+                verimagen.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+                verimagen.heightAnchor.constraint(equalToConstant: 250)
+            ])
+        }
+        
+        func setupScrollView() {
+            // Configurar el ScrollView
+            view.addSubview(scrollView)
+            scrollView.addSubview(contentView)
+            
+            NSLayoutConstraint.activate([
+                // ScrollView llena toda la vista
+                scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+                scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+                
+                // ContentView dentro del ScrollView
+                contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+                contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+                contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+                contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+                contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+            ])
+        }
+        
+        func configurarEstiloVistas() {
+            // Estilo de la imagen
+            verimagen.layer.cornerRadius = 16
+            verimagen.clipsToBounds = true
+            verimagen.layer.borderWidth = 3
+            verimagen.layer.borderColor = UIColor.systemGray5.cgColor
+            verimagen.contentMode = .scaleAspectFill
+            
+            // Mover botones después de la imagen programáticamente
+            vervideo.removeFromSuperview()
+            escuchar.removeFromSuperview()
+            contentView.addSubview(vervideo)
+            contentView.addSubview(escuchar)
+            vervideo.translatesAutoresizingMaskIntoConstraints = false
+            escuchar.translatesAutoresizingMaskIntoConstraints = false
+            
+            NSLayoutConstraint.activate([
+                // Botón de video - debajo de la imagen
+                vervideo.topAnchor.constraint(equalTo: verimagen.bottomAnchor, constant: 20),
+                vervideo.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 40),
+                vervideo.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -40),
+                vervideo.heightAnchor.constraint(equalToConstant: 50),
+                
+                // Botón de audio - debajo del botón de video
+                escuchar.topAnchor.constraint(equalTo: vervideo.bottomAnchor, constant: 16),
+                escuchar.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 40),
+                escuchar.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -40),
+                escuchar.heightAnchor.constraint(equalToConstant: 50)
+            ])
+            
+            // Estilo de los botones
+            configurarBoton(vervideo, titulo: "🎥 Ver video con más información", color: .systemOrange)
+            configurarBoton(escuchar, titulo: "🔊 Escuchar estado y capital", color: .systemGreen)
+        }
+        
+        func configurarBoton(_ boton: UIButton, titulo: String, color: UIColor) {
+            boton.setTitle(titulo, for: .normal)
+            boton.backgroundColor = color
+            boton.setTitleColor(.white, for: .normal)
+            boton.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+            boton.layer.cornerRadius = 12
+            boton.layer.shadowColor = UIColor.black.cgColor
+            boton.layer.shadowOpacity = 0.2
+            boton.layer.shadowOffset = CGSize(width: 0, height: 2)
+            boton.layer.shadowRadius = 4
+        }
+        
+        func setupLugarTuristicoViews() {
+            contentView.addSubview(lugarTuristicoContainerView)
+            lugarTuristicoContainerView.addSubview(lugarTuristicoTitleLabel)
+            lugarTuristicoContainerView.addSubview(lugarTuristicoLabel)
+            
+            print("🏗️ Configurando vista de lugar turístico")
+            
+            NSLayoutConstraint.activate([
+                // Container del lugar turístico - debajo de los botones
+                lugarTuristicoContainerView.topAnchor.constraint(equalTo: escuchar.bottomAnchor, constant: 24),
+                lugarTuristicoContainerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+                lugarTuristicoContainerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+                lugarTuristicoContainerView.heightAnchor.constraint(greaterThanOrEqualToConstant: 100),
+                lugarTuristicoContainerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24),
+                
+                // Título de lugar turístico
+                lugarTuristicoTitleLabel.topAnchor.constraint(equalTo: lugarTuristicoContainerView.topAnchor, constant: 16),
+                lugarTuristicoTitleLabel.leadingAnchor.constraint(equalTo: lugarTuristicoContainerView.leadingAnchor, constant: 16),
+                lugarTuristicoTitleLabel.trailingAnchor.constraint(equalTo: lugarTuristicoContainerView.trailingAnchor, constant: -16),
+                
+                // Descripción del lugar turístico
+                lugarTuristicoLabel.topAnchor.constraint(equalTo: lugarTuristicoTitleLabel.bottomAnchor, constant: 12),
+                lugarTuristicoLabel.leadingAnchor.constraint(equalTo: lugarTuristicoContainerView.leadingAnchor, constant: 16),
+                lugarTuristicoLabel.trailingAnchor.constraint(equalTo: lugarTuristicoContainerView.trailingAnchor, constant: -16),
+                lugarTuristicoLabel.bottomAnchor.constraint(equalTo: lugarTuristicoContainerView.bottomAnchor, constant: -16)
+            ])
+        }
+        
+        func mostrarLugarTuristico() {
+            if let nombre = estadoNombre {
+                let lugarInfo = lugarTuristicoPorEstado[nombre] ?? "Información no disponible"
+                lugarTuristicoLabel.text = lugarInfo
+                print("🗺️ Lugar turístico para \(nombre): \(lugarInfo)")
+                print("📏 Frame del container: \(lugarTuristicoContainerView.frame)")
+                print("📏 Frame del label: \(lugarTuristicoLabel.frame)")
+            } else {
+                lugarTuristicoLabel.text = "Información no disponible"
+                print("⚠️ No hay estadoNombre configurado")
+            }
+            
+            // Forzar layout
+            view.layoutIfNeeded()
         }
 
         // Método para generar el nombre del asset de imagen

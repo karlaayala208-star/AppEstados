@@ -576,15 +576,37 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         present(alert, animated: true)
     }
 
-  
     @IBAction func btnAprender(_ sender: UIButton) {
-//        performSegue(withIdentifier: "IrMapa", sender: self)
-        let vc = MapaViewController()
-        if let navigationController = self.navigationController {
-            navigationController.pushViewController(vc, animated: true)
-        } else {
-            present(vc, animated: true)
+        // Mostrar opciones de aprendizaje
+        let alert = UIAlertController(title: "¿Cómo quieres aprender?", message: "Elige una opción", preferredStyle: .actionSheet)
+        
+        alert.addAction(UIAlertAction(title: "🗺️ Explorar Mapa Interactivo", style: .default) { [weak self] _ in
+            let vc = MapaViewController()
+            if let navigationController = self?.navigationController {
+                navigationController.pushViewController(vc, animated: true)
+            } else {
+                self?.present(vc, animated: true)
+            }
+        })
+        
+        alert.addAction(UIAlertAction(title: "🎮 Jugar Memorama", style: .default) { [weak self] _ in
+            let vc = MemoramaViewController()
+            if let navigationController = self?.navigationController {
+                navigationController.pushViewController(vc, animated: true)
+            } else {
+                self?.present(vc, animated: true)
+            }
+        })
+        
+        alert.addAction(UIAlertAction(title: "Cancelar", style: .cancel))
+        
+        // Para iPad
+        if let popoverController = alert.popoverPresentationController {
+            popoverController.sourceView = sender
+            popoverController.sourceRect = sender.bounds
         }
+        
+        present(alert, animated: true)
     }
     
     @IBAction func btnPrueba(_ sender: UIButton) {

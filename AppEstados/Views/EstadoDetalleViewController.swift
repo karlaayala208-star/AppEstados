@@ -85,6 +85,19 @@ class EstadoDetalleViewController: UIViewController {
         return label
     }()
     
+    // Botón de favorito
+    private let favoritoButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        button.layer.cornerRadius = 12
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOpacity = 0.2
+        button.layer.shadowOffset = CGSize(width: 0, height: 2)
+        button.layer.shadowRadius = 4
+        return button
+    }()
+    
     var reproductor: AVAudioPlayer?
     var estadoNombre: String?
     
@@ -211,6 +224,7 @@ class EstadoDetalleViewController: UIViewController {
             setupScrollView()
             setupComidaContainer()
             configurarEstiloVistas()  // Mover ANTES de setupLugarTuristicoViews
+            setupFavoritoButton()  // Agregar botón de favorito
             setupLugarTuristicoViews()  // Ahora los botones ya están en contentView
             
             // Cargar imagen según el estado
@@ -354,6 +368,69 @@ class EstadoDetalleViewController: UIViewController {
             boton.layer.shadowRadius = 4
         }
         
+        func setupFavoritoButton() {
+            contentView.addSubview(favoritoButton)
+            
+            // Actualizar estado del botón
+            actualizarEstadoBotonFavorito()
+            
+            // Agregar acción
+            favoritoButton.addTarget(self, action: #selector(favoritoButtonTapped), for: .touchUpInside)
+            
+            NSLayoutConstraint.activate([
+                // Botón de favorito - debajo del botón de audio
+                favoritoButton.topAnchor.constraint(equalTo: escuchar.bottomAnchor, constant: 20),
+                favoritoButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 40),
+                favoritoButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -40),
+                favoritoButton.heightAnchor.constraint(equalToConstant: 50)
+            ])
+        }
+        
+        func actualizarEstadoBotonFavorito() {
+            guard let nombre = estadoNombre else { return }
+            
+            let esFavorito = CoreDataManager.shared.esFavorito(nombre)
+            
+            if esFavorito {
+                favoritoButton.setTitle("⭐ Quitar de favoritos", for: .normal)
+                favoritoButton.backgroundColor = .systemYellow
+                favoritoButton.setTitleColor(.darkText, for: .normal)
+            } else {
+                favoritoButton.setTitle("☆ Agregar a favoritos", for: .normal)
+                favoritoButton.backgroundColor = .systemGray5
+                favoritoButton.setTitleColor(.label, for: .normal)
+            }
+        }
+        
+        @objc func favoritoButtonTapped() {
+            guard let nombre = estadoNombre else { return }
+            
+            // Toggle favorito
+            let ahoraEsFavorito = CoreDataManager.shared.toggleFavorito(nombre)
+            
+            // Animar cambio
+            UIView.animate(withDuration: 0.3, animations: {
+                self.favoritoButton.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+            }) { _ in
+                UIView.animate(withDuration: 0.3) {
+                    self.favoritoButton.transform = .identity
+                }
+            }
+            
+            // Actualizar UI
+            actualizarEstadoBotonFavorito()
+            
+            // Mostrar feedback
+            let mensaje = ahoraEsFavorito ? "agregado a" : "eliminado de"
+            let alert = UIAlertController(
+                title: ahoraEsFavorito ? "⭐ ¡Agregado!" : "Eliminado",
+                message: "\(nombre) \(mensaje) favoritos",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+        }
+        
         func setupLugarTuristicoViews() {
             contentView.addSubview(lugarTuristicoContainerView)
             lugarTuristicoContainerView.addSubview(lugarTuristicoTitleLabel)
@@ -362,8 +439,8 @@ class EstadoDetalleViewController: UIViewController {
             print("🏗️ Configurando vista de lugar turístico")
             
             NSLayoutConstraint.activate([
-                // Container del lugar turístico - debajo de los botones
-                lugarTuristicoContainerView.topAnchor.constraint(equalTo: escuchar.bottomAnchor, constant: 24),
+                // Container del lugar turístico - debajo del botón de favorito
+                lugarTuristicoContainerView.topAnchor.constraint(equalTo: favoritoButton.bottomAnchor, constant: 24),
                 lugarTuristicoContainerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
                 lugarTuristicoContainerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
                 lugarTuristicoContainerView.heightAnchor.constraint(greaterThanOrEqualToConstant: 100),

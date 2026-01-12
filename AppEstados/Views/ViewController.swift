@@ -83,6 +83,37 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         return button
     }()
     
+    // Vista de favoritos
+    private let favoritosContainerView: UIView = {
+        let view = UIView()
+        view.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.85)
+        view.layer.cornerRadius = 12
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOpacity = 0.1
+        view.layer.shadowOffset = CGSize(width: 0, height: 2)
+        view.layer.shadowRadius = 4
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.isHidden = true  // Oculto por defecto
+        return view
+    }()
+    
+    private let favoritosTitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "⭐ Mis Estados Favoritos"
+        label.font = .systemFont(ofSize: 16, weight: .bold)
+        label.textColor = .label
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private let favoritosStackView: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.spacing = 8
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
@@ -90,6 +121,9 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         
         // Configurar el banner de perfil
         setupProfileBanner()
+        
+        // Configurar vista de favoritos
+        setupFavoritosView()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -98,6 +132,9 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         // Recargar datos del perfil cada vez que la vista aparece
         configurarNavigationBar()
         cargarImagenPerfil()
+        
+        // Recargar favoritos
+        cargarFavoritos()
     }
     
     func configurarNavigationBar() {
@@ -201,6 +238,85 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         
         // Agregar acción al botón de editar perfil
         editProfileButton.addTarget(self, action: #selector(editProfileTapped), for: .touchUpInside)
+    }
+    
+    func setupFavoritosView() {
+        // Agregar la vista de favoritos
+        view.addSubview(favoritosContainerView)
+        favoritosContainerView.addSubview(favoritosTitleLabel)
+        favoritosContainerView.addSubview(favoritosStackView)
+        
+        NSLayoutConstraint.activate([
+            // Container de favoritos - debajo del banner de perfil
+            favoritosContainerView.topAnchor.constraint(equalTo: profileBannerView.bottomAnchor, constant: 12),
+            favoritosContainerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            favoritosContainerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            
+            // Título
+            favoritosTitleLabel.topAnchor.constraint(equalTo: favoritosContainerView.topAnchor, constant: 12),
+            favoritosTitleLabel.leadingAnchor.constraint(equalTo: favoritosContainerView.leadingAnchor, constant: 12),
+            favoritosTitleLabel.trailingAnchor.constraint(equalTo: favoritosContainerView.trailingAnchor, constant: -12),
+            
+            // Stack view
+            favoritosStackView.topAnchor.constraint(equalTo: favoritosTitleLabel.bottomAnchor, constant: 8),
+            favoritosStackView.leadingAnchor.constraint(equalTo: favoritosContainerView.leadingAnchor, constant: 12),
+            favoritosStackView.trailingAnchor.constraint(equalTo: favoritosContainerView.trailingAnchor, constant: -12),
+            favoritosStackView.bottomAnchor.constraint(equalTo: favoritosContainerView.bottomAnchor, constant: -12)
+        ])
+    }
+    
+    func cargarFavoritos() {
+        // Limpiar stack view
+        favoritosStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        
+        // Obtener favoritos
+        let favoritos = CoreDataManager.shared.obtenerFavoritos()
+        
+        if favoritos.isEmpty {
+            favoritosContainerView.isHidden = true
+        } else {
+            favoritosContainerView.isHidden = false
+            
+            // Limitar a 5 favoritos mostrados
+            let favoritosAMostrar = Array(favoritos.prefix(5))
+            
+            for favorito in favoritosAMostrar {
+                let button = crearBotonFavorito(nombreEstado: favorito.nombreEstado ?? "")
+                favoritosStackView.addArrangedSubview(button)
+            }
+            
+            // Si hay más de 5, agregar indicador
+            if favoritos.count > 5 {
+                let label = UILabel()
+                label.text = "y \(favoritos.count - 5) más..."
+                label.font = .systemFont(ofSize: 12, weight: .regular)
+                label.textColor = .systemGray
+                label.textAlignment = .center
+                favoritosStackView.addArrangedSubview(label)
+            }
+        }
+    }
+    
+    func crearBotonFavorito(nombreEstado: String) -> UIButton {
+        let button = UIButton(type: .system)
+        button.setTitle("• \(nombreEstado)", for: .normal)
+        button.setTitleColor(.label, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
+        button.contentHorizontalAlignment = .leading
+        button.addTarget(self, action: #selector(favoritoTapped), for: .touchUpInside)
+        button.accessibilityLabel = nombreEstado
+        return button
+    }
+    
+    @objc func favoritoTapped(_ sender: UIButton) {
+        guard let nombreEstado = sender.accessibilityLabel else { return }
+        
+        // Navegar a EstadoDetalleViewController
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+        if let detalleVC = storyboard.instantiateViewController(withIdentifier: "EstadoDetalleViewController") as? EstadoDetalleViewController {
+            detalleVC.estadoNombre = nombreEstado
+            navigationController?.pushViewController(detalleVC, animated: true)
+        }
     }
     
     @objc func profileImageTapped() {

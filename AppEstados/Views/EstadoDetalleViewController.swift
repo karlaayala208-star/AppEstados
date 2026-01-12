@@ -241,13 +241,6 @@ class EstadoDetalleViewController: UIViewController {
         
         override func viewDidLayoutSubviews() {
             super.viewDidLayoutSubviews()
-            
-            // Actualizar el contentSize del scroll después de que el layout se haya calculado
-            DispatchQueue.main.async {
-                print("📐 ContentView height: \(self.contentView.frame.height)")
-                print("📐 ScrollView contentSize: \(self.scrollView.contentSize)")
-                print("📐 Lugar Turístico Container frame: \(self.lugarTuristicoContainerView.frame)")
-            }
         }
         
         func setupComidaContainer() {
@@ -436,6 +429,11 @@ class EstadoDetalleViewController: UIViewController {
             lugarTuristicoContainerView.addSubview(lugarTuristicoTitleLabel)
             lugarTuristicoContainerView.addSubview(lugarTuristicoLabel)
             
+            // Agregar tap gesture para mostrar imagen
+            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(mostrarImagenLugarTuristico))
+            lugarTuristicoContainerView.addGestureRecognizer(tapGesture)
+            lugarTuristicoContainerView.isUserInteractionEnabled = true
+            
             print("🏗️ Configurando vista de lugar turístico")
             
             NSLayoutConstraint.activate([
@@ -463,9 +461,6 @@ class EstadoDetalleViewController: UIViewController {
             if let nombre = estadoNombre {
                 let lugarInfo = lugarTuristicoPorEstado[nombre] ?? "Información no disponible"
                 lugarTuristicoLabel.text = lugarInfo
-                print("🗺️ Lugar turístico para \(nombre): \(lugarInfo)")
-                print("📏 Frame del container: \(lugarTuristicoContainerView.frame)")
-                print("📏 Frame del label: \(lugarTuristicoLabel.frame)")
             } else {
                 lugarTuristicoLabel.text = "Información no disponible"
                 print("⚠️ No hay estadoNombre configurado")
@@ -473,6 +468,60 @@ class EstadoDetalleViewController: UIViewController {
             
             // Forzar layout
             view.layoutIfNeeded()
+        }
+        
+        @objc func mostrarImagenLugarTuristico() {
+            guard let nombre = estadoNombre else { return }
+            
+            // Generar nombre de la imagen
+            let nombreImagen = nombreImagenLugarParaEstado(nombre)
+            
+            // Cargar imagen desde assets
+            guard let imagen = UIImage(named: nombreImagen) else {
+                // Mostrar alerta si no se encuentra la imagen
+                print("❌ Imagen no encontrada: \(nombreImagen)")
+                let alerta = UIAlertController(
+                    title: "Imagen no disponible",
+                    message: "Lo sentimos, la imagen para \(nombre) no está disponible.",
+                    preferredStyle: .alert
+                )
+                alerta.addAction(UIAlertAction(title: "OK", style: .default))
+                present(alerta, animated: true)
+                return
+            }
+            
+            // Crear alert controller con imagen
+            let alert = UIAlertController(
+                title: "📍 \(nombre)",
+                message: "\n\n\n\n\n\n\n\n\n\n", // Espacio para la imagen
+                preferredStyle: .alert
+            )
+            
+            // Crear y configurar el imageView
+            let imageView = UIImageView(image: imagen)
+            imageView.contentMode = .scaleAspectFit
+            imageView.translatesAutoresizingMaskIntoConstraints = false
+            imageView.layer.cornerRadius = 8
+            imageView.clipsToBounds = true
+            
+            alert.view.addSubview(imageView)
+            
+            NSLayoutConstraint.activate([
+                imageView.centerXAnchor.constraint(equalTo: alert.view.centerXAnchor),
+                imageView.topAnchor.constraint(equalTo: alert.view.topAnchor, constant: 50),
+                imageView.widthAnchor.constraint(equalToConstant: 240),
+                imageView.heightAnchor.constraint(equalToConstant: 180)
+            ])
+            
+            alert.addAction(UIAlertAction(title: "Cerrar", style: .default))
+            present(alert, animated: true)
+        }
+        
+        // Método para generar el nombre de la imagen del lugar turístico
+        func nombreImagenLugarParaEstado(_ estado: String) -> String {
+            let sinAcentos = estado.folding(options: .diacriticInsensitive, locale: .current)
+            let sinEspacios = sinAcentos.replacingOccurrences(of: " ", with: "").lowercased()
+            return "\(sinEspacios)lugar"
         }
 
         // Método para generar el nombre del asset de imagen

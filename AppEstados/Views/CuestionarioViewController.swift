@@ -33,7 +33,7 @@ class CuestionarioViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
-        self.navigationItem.hidesBackButton = true
+        title = "Cuestionario"
         configurarVista()
         mostrarPregunta()
     }

@@ -74,27 +74,66 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         return label
     }()
     
+    private let editProfileButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Editar perfil", for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
+        button.setTitleColor(.systemBlue, for: .normal)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
         self.navigationItem.hidesBackButton = true
         
-        // Configurar el título del NavigationBar con el nombre del usuario
-        configurarNavigationBar()
-        
         // Configurar el banner de perfil
         setupProfileBanner()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
         
-        // Cargar imagen de perfil desde Firestore
+        // Recargar datos del perfil cada vez que la vista aparece
+        configurarNavigationBar()
         cargarImagenPerfil()
     }
     
     func configurarNavigationBar() {
-        // Obtener el nombre del usuario desde Firebase o usar el nombre proporcionado
+        // Obtener el nombre del usuario desde Firebase Auth
         if let user = Auth.auth().currentUser {
             let displayName = user.displayName ?? "Usuario"
             self.title = "Hola, \(displayName)"
             userNameLabel.text = displayName
+            
+            // Recargar nombre desde Firestore por si se actualizó
+            let uid = user.uid
+            let db = Firestore.firestore()
+            db.collection("usuarios").document(uid).getDocument { [weak self] document, error in
+                guard let self = self,
+                      let document = document,
+                      document.exists,
+                      let data = document.data() else { return }
+                
+                if let nombre = data["nombre"] as? String {
+                    DispatchQueue.main.async {
+                        self.title = "Hola, \(nombre)"
+                        self.userNameLabel.text = nombre
+                        
+                        // Actualizar displayName en Firebase Auth si es diferente
+                        if nombre != user.displayName {
+                            let changeRequest = user.createProfileChangeRequest()
+                            changeRequest.displayName = nombre
+                            changeRequest.commitChanges { error in
+                                if let error = error {
+                                    print("Error al actualizar displayName: \(error.localizedDescription)")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         } else if let nombre = nombreUsuario {
             self.title = "Hola, \(nombre)"
             userNameLabel.text = nombre
@@ -103,7 +142,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             userNameLabel.text = "Usuario"
         }
         
-        // Opcional: Agregar botón de cerrar sesión
+        // Agregar botón de cerrar sesión
         let logoutButton = UIBarButtonItem(title: "Salir", style: .plain, target: self, action: #selector(cerrarSesion))
         self.navigationItem.rightBarButtonItem = logoutButton
     }
@@ -114,6 +153,7 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         profileBannerView.addSubview(profileImageView)
         profileBannerView.addSubview(userNameLabel)
         profileBannerView.addSubview(changePhotoLabel)
+        profileBannerView.addSubview(editProfileButton)
         profileImageView.addSubview(cameraButton)
         
         // Configurar las constraints
@@ -136,15 +176,20 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             cameraButton.widthAnchor.constraint(equalToConstant: 24),
             cameraButton.heightAnchor.constraint(equalToConstant: 24),
             
+            // Edit profile button - a la derecha
+            editProfileButton.centerYAnchor.constraint(equalTo: profileBannerView.centerYAnchor),
+            editProfileButton.trailingAnchor.constraint(equalTo: profileBannerView.trailingAnchor, constant: -12),
+            editProfileButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 90),
+            
             // User name label
             userNameLabel.topAnchor.constraint(equalTo: profileBannerView.topAnchor, constant: 20),
             userNameLabel.leadingAnchor.constraint(equalTo: profileImageView.trailingAnchor, constant: 12),
-            userNameLabel.trailingAnchor.constraint(equalTo: profileBannerView.trailingAnchor, constant: -12),
+            userNameLabel.trailingAnchor.constraint(equalTo: editProfileButton.leadingAnchor, constant: -8),
             
             // Change photo label
             changePhotoLabel.topAnchor.constraint(equalTo: userNameLabel.bottomAnchor, constant: 2),
             changePhotoLabel.leadingAnchor.constraint(equalTo: profileImageView.trailingAnchor, constant: 12),
-            changePhotoLabel.trailingAnchor.constraint(equalTo: profileBannerView.trailingAnchor, constant: -12),
+            changePhotoLabel.trailingAnchor.constraint(equalTo: editProfileButton.leadingAnchor, constant: -8),
         ])
         
         // Agregar tap gesture a la imagen de perfil
@@ -153,6 +198,9 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
         
         // Agregar acción al botón de cámara
         cameraButton.addTarget(self, action: #selector(profileImageTapped), for: .touchUpInside)
+        
+        // Agregar acción al botón de editar perfil
+        editProfileButton.addTarget(self, action: #selector(editProfileTapped), for: .touchUpInside)
     }
     
     @objc func profileImageTapped() {
@@ -396,6 +444,13 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
             }
         } catch let error {
             mostrarAlerta(titulo: "Error", mensaje: "No se pudo cerrar sesión: \(error.localizedDescription)")
+        }
+    }
+    
+    @objc func editProfileTapped() {
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+        if let editarPerfilVC = storyboard.instantiateViewController(withIdentifier: "EditarPerfilViewController") as? EditarPerfilViewController {
+            navigationController?.pushViewController(editarPerfilVC, animated: true)
         }
     }
     

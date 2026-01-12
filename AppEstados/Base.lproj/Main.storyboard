@@ -436,6 +436,22 @@
             </objects>
             <point key="canvasLocation" x="2878.6259541984732" y="-96.478873239436624"/>
         </scene>
+        <!--Editar Perfil View Controller-->
+        <scene sceneID="vRz-8C-mJA">
+            <objects>
+                <viewController storyboardIdentifier="EditarPerfilViewController" id="eP3-2Y-kAz" customClass="EditarPerfilViewController" customModule="AppEstados" customModuleProvider="target" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="Hyc-Fd-3nK">
+                        <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <viewLayoutGuide key="safeArea" id="GJl-hQ-2bF"/>
+                        <color key="backgroundColor" systemColor="systemBackgroundColor"/>
+                    </view>
+                    <navigationItem key="navigationItem" id="0Hg-pF-Lh7"/>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="WfU-h8-Dxe" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="1259" y="590"/>
+        </scene>
     </scenes>
     <resources>
         <image name="aprenderimg.jpeg" width="606" height="158"/>
